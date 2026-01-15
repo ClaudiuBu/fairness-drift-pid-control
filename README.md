@@ -10,15 +10,19 @@ This work proposes a closed-loop mitigation framework that treats fairness as a 
 A Proportional–Integral–Derivative (PID) controller monitors demographic parity violations and adaptively reweights training samples during incremental learning.
 
 ## Repository Structure
-src/
-├── data.py # Synthetic data stream generation with fairness drift
-├── model.py #  SGDClassifier model
-├── fairness.py # Fairness metrics (Demographic Parity)
-├── pid.py # PID controller implementation
-├── experiment.py # Experimental logic and baselines
-├── plots.py # Visualization utilities
-run.py # Main entry point
-batch_runner.py # Monte Carlo simulation
+.
+├── src/
+│   ├── data.py             # Synthetic data stream generation with fairness drift
+│   ├── model.py            # Incremental classifier (SGDClassifier)
+│   ├── fairness.py         # Fairness metrics (Demographic Parity)
+│   ├── pid.py              # PID controller implementation
+│   ├── experiment.py      # Experimental logic and baselines
+│   └── plots.py            # Visualization utilities
+├── run.py                  # Main entry point
+├── batch_runner.py         # Monte Carlo robustness simulations
+├── requirements.txt        # Python dependencies
+└── README.md               # Project documentation
+
 
 
 ## Running the Experiments
