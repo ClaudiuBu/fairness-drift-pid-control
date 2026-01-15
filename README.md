@@ -33,7 +33,7 @@ adaptively reweights training samples during incremental learning.
 ├── batch_runner.py    # Monte Carlo robustness simulations
 ├── requirements.txt   # Python dependencies
 └── README.md          # Project documentation
-
+```
 
 ## Running the Experiments
 To reproduce the experiments reported in the paper, run:
