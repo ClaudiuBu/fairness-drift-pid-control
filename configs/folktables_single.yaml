@@ -1,13 +1,13 @@
 experiment:
-  name: "folktables_temporal"
+  name: "folktables_single"
   type: "single_run"
   data_type: "folktables"
   
 data:
   task: "income"  # income, employment
-  states: ["CA", "TX", "NY"]  # Multiple states for temporal drift
+  states: ["CA"]  # Single state for quick testing
   years: [2014, 2015, 2016, 2017, 2018]
-  mode: "temporal"  # temporal drift across years
+  mode: "temporal"  # temporal, static, geographic
   batch_size: 500
   sensitive_attribute: "SEX"
   num_time_steps: 100

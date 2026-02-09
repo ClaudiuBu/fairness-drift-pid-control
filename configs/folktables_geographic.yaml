@@ -1,0 +1,32 @@
+experiment:
+  name: "folktables_geographic"
+  type: "robustness"
+  data_type: "folktables"
+  
+data:
+  task: "income"
+  states: ["CA", "TX", "NY", "FL", "PA", "IL", "OH", "MI", "NC", "GA"]
+  years: [2018]  # Single year, multiple states
+  mode: "geographic"  # geographic diversity test
+  batch_size: 500
+  sensitive_attribute: "SEX"
+  num_time_steps: 50
+
+methods:
+  - baseline
+  - pid
+
+pid_controller:
+  kp: 10.0
+  ki: 1.0
+  kd: 0.5
+  target: 0.0
+
+robustness:
+  test_geographic: true
+  test_task: false
+  
+output:
+  dir: "results/folktables"
+  dpi: 150
+  format: "png"

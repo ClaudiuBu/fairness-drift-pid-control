@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 
 def plot_results(log_fairness, log_accuracy, log_control, filename_prefix='fig', year_transitions=None):
@@ -34,13 +35,28 @@ def plot_results(log_fairness, log_accuracy, log_control, filename_prefix='fig',
     widths = {'base': 1, 'baseline': 1, 'static': 1, 
               'sliding': 2, 'pid': 3}
     
+    first_vals = np.asarray(next(iter(log_fairness.values())))
+    series_len = first_vals.shape[1] if first_vals.ndim == 2 else len(first_vals)
+
     for method, values in log_fairness.items():
         label = method.replace('_', ' ').title()
-        plt.plot(values, label=label, 
-                color=colors.get(method, 'black'),
-                linestyle=styles.get(method, '-'),
-                alpha=alphas.get(method, 0.8),
-                linewidth=widths.get(method, 1))
+        values = np.asarray(values)
+        if values.ndim == 2:
+            mean = values.mean(axis=0)
+            std = values.std(axis=0)
+            plt.plot(mean, label=label, 
+                    color=colors.get(method, 'black'),
+                    linestyle=styles.get(method, '-'),
+                    alpha=alphas.get(method, 0.8),
+                    linewidth=widths.get(method, 1))
+            plt.fill_between(range(len(mean)), mean - std, mean + std,
+                             color=colors.get(method, 'black'), alpha=0.2)
+        else:
+            plt.plot(values, label=label, 
+                    color=colors.get(method, 'black'),
+                    linestyle=styles.get(method, '-'),
+                    alpha=alphas.get(method, 0.8),
+                    linewidth=widths.get(method, 1))
     
     plt.axhline(0, color='black', linestyle=':', label='Target (0.0)', alpha=0.5)
     
@@ -51,7 +67,7 @@ def plot_results(log_fairness, log_accuracy, log_control, filename_prefix='fig',
             plt.axvline(trans, color='red', linestyle='--', alpha=0.6, 
                        linewidth=2, label=label_text)
     # Add drift start line if data looks synthetic (drift at t=15)
-    elif len(log_fairness[list(log_fairness.keys())[0]]) >= 20:
+    elif series_len >= 20:
         plt.axvline(15, color='red', linestyle=':', label='Drift Start', alpha=0.5)
     
     plt.title("Fairness Drift Mitigation Comparison")
@@ -65,19 +81,34 @@ def plot_results(log_fairness, log_accuracy, log_control, filename_prefix='fig',
     # --- GRAFIC 2: ACCURACY ---
     plt.figure(figsize=(12, 5))
     
+    first_acc_vals = np.asarray(next(iter(log_accuracy.values())))
+    acc_series_len = first_acc_vals.shape[1] if first_acc_vals.ndim == 2 else len(first_acc_vals)
+
     for method, values in log_accuracy.items():
         label = method.replace('_', ' ').title()
-        plt.plot(values, label=label,
-                color=colors.get(method, 'black'),
-                linestyle=styles.get(method, '-'),
-                alpha=alphas.get(method, 0.8),
-                linewidth=widths.get(method, 1))
+        values = np.asarray(values)
+        if values.ndim == 2:
+            mean = values.mean(axis=0)
+            std = values.std(axis=0)
+            plt.plot(mean, label=label,
+                    color=colors.get(method, 'black'),
+                    linestyle=styles.get(method, '-'),
+                    alpha=alphas.get(method, 0.8),
+                    linewidth=widths.get(method, 1))
+            plt.fill_between(range(len(mean)), mean - std, mean + std,
+                             color=colors.get(method, 'black'), alpha=0.2)
+        else:
+            plt.plot(values, label=label,
+                    color=colors.get(method, 'black'),
+                    linestyle=styles.get(method, '-'),
+                    alpha=alphas.get(method, 0.8),
+                    linewidth=widths.get(method, 1))
     
     # Add year transitions
     if year_transitions:
         for trans in year_transitions:
             plt.axvline(trans, color='red', linestyle='--', alpha=0.4, linewidth=1.5)
-    elif len(log_accuracy[list(log_accuracy.keys())[0]]) >= 20:
+    elif acc_series_len >= 20:
         plt.axvline(15, color='red', linestyle=':', label='Drift Start', alpha=0.5)
     
     plt.title("Impact on Accuracy")
@@ -86,10 +117,13 @@ def plot_results(log_fairness, log_accuracy, log_control, filename_prefix='fig',
     plt.ylim(0.4, 1.0)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f'{output_dir}/{filename_prefix}_accuracy.png', dpi=150)
+    plt.savefig(f'{filename_prefix}_accuracy.png', dpi=150)
     plt.show()
 
     # --- GRAFIC 3: CONTROL SIGNAL ---
+    if not log_control:
+        return
+    
     plt.figure(figsize=(10, 4))
     plt.plot(log_control, color='purple', linewidth=1.5, label='PID Control Signal')
     
@@ -105,6 +139,6 @@ def plot_results(log_fairness, log_accuracy, log_control, filename_prefix='fig',
     plt.ylabel("Correction Magnitude (u)")
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f'{output_dir}/{filename_prefix}_control.png', dpi=150)
+    plt.savefig(f'{filename_prefix}_control.png', dpi=150)
     plt.show()
 
