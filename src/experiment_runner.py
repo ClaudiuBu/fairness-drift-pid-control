@@ -12,12 +12,16 @@ import json
 import mlflow
 from scipy import stats
 
-from src.experiment import run_experiment
+from src.core.experiment_utils import compute_method_metrics, log_metrics_to_mlflow
+from src.experiment_modular import StreamingExperiment
 from src.data import FolktablesDataStream
 from src.model import OnlineModel
 from src.fairness import demographic_parity
 from src.pid import PIDController
 from src.plots import plot_results
+from src.strategies.base import BaselineStrategy
+from src.strategies.gbr import StaticGBRStrategy, SlidingGBRStrategy
+from src.strategies.pid import PIDControlStrategy
 
 
 class ExperimentRunner:
@@ -54,9 +58,34 @@ class ExperimentRunner:
         with open(config_file, 'w') as f:
             yaml.dump(self.config, f)
         self.log(f"✓ Config saved: {config_file}")
-        
 
-    
+    def _build_synthetic_strategies(self):
+        methods = self.exp_config.get('methods', ['base', 'static', 'sliding', 'pid'])
+        pid_config = self.config.get('pid_controller', {})
+        window_size = self.data_config.get('window_size', 1000)
+        u_clip = pid_config.get('u_clip', 3.0)
+
+        pid = PIDController(
+            kp=pid_config.get('kp', 10.0),
+            ki=pid_config.get('ki', 1.0),
+            kd=pid_config.get('kd', 0.5),
+            target=pid_config.get('target', 0.0)
+        )
+
+        strategies = {}
+        for method in methods:
+            if method in ('base', 'baseline'):
+                strategies[method] = BaselineStrategy()
+            elif method == 'static':
+                strategies[method] = StaticGBRStrategy()
+            elif method == 'sliding':
+                strategies[method] = SlidingGBRStrategy(window_size=window_size)
+            elif method == 'pid':
+                strategies[method] = PIDControlStrategy(pid, u_clip=u_clip)
+            else:
+                self.log(f"⚠️  Unknown method '{method}' - skipping")
+
+        return strategies
     def run_synthetic_single(self):
         """Run single experiment on synthetic data."""
         self.log("\n" + "="*70)
@@ -65,23 +94,26 @@ class ExperimentRunner:
         
         with mlflow.start_run(run_name=f"synthetic_single_{datetime.now().strftime('%H%M%S')}"):
             np.random.seed(42)
-            log_fairness, log_accuracy, log_control = run_experiment(
-                T=self.data_config['num_batches']
+            strategies = self._build_synthetic_strategies()
+            exp = StreamingExperiment(strategies, log_results=False)
+            logs = exp.run_streaming(
+                T=self.data_config['num_batches'],
+                drift_start=self.data_config.get('drift_start', 15),
+                drift_slope=self.data_config.get('drift_slope', 0.08),
+                batch_size=self.data_config.get('num_samples_per_batch', 500),
+                verbose=False
             )
-            
-            # Log metrics to MLflow
-            for method in log_fairness.keys():
-                mean_dp = np.mean(np.abs(log_fairness[method]))
-                std_dp = np.std(log_fairness[method])
-                mean_acc = np.mean(log_accuracy[method])
-                std_acc = np.std(log_accuracy[method])
-                
-                mlflow.log_metrics({
-                    f'{method}_mean_dp': mean_dp,
-                    f'{method}_std_dp': std_dp,
-                    f'{method}_mean_acc': mean_acc,
-                    f'{method}_std_acc': std_acc
-                })
+
+            log_fairness = logs['fairness']
+            log_accuracy = logs['accuracy']
+            log_control = logs['control']
+
+            metrics = compute_method_metrics(
+                log_fairness,
+                log_accuracy,
+                method_names=list(strategies.keys())
+            )
+            log_metrics_to_mlflow(metrics)
         
         output_prefix = os.path.join(self.output_dir, "single_run/fig")
         os.makedirs(os.path.dirname(output_prefix), exist_ok=True)
@@ -106,7 +138,17 @@ class ExperimentRunner:
             
             for i, seed in enumerate(seeds):
                 np.random.seed(seed)
-                log_fairness, log_accuracy, _ = run_experiment(T=T)
+                strategies = self._build_synthetic_strategies()
+                exp = StreamingExperiment(strategies, log_results=False)
+                logs = exp.run_streaming(
+                    T=T,
+                    drift_start=self.data_config.get('drift_start', 15),
+                    drift_slope=self.data_config.get('drift_slope', 0.08),
+                    batch_size=self.data_config.get('num_samples_per_batch', 500),
+                    verbose=False
+                )
+                log_fairness = logs['fairness']
+                log_accuracy = logs['accuracy']
                 
                 for m in methods:
                     results_fairness[m][i, :] = log_fairness[m]
