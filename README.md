@@ -1,48 +1,48 @@
-# Fairness Drift Mitigation via PID Control
+# PID Control for Fairness Drift (POC)
 
-This repository contains the reference implementation for the paper:
-
-**Adaptive Fairness Control: Mitigating Algorithmic Drift in Non-Stationary Environments using PID**
-
----
+Reference implementation for **Adaptive Fairness Control: Mitigating Algorithmic Drift in Non-Stationary Environments using PID**.
 
 ## Overview
-
-Fairness in deployed machine learning systems is not static and may degrade over time due to
-distributional and concept drift.  
-This work proposes a **closed-loop mitigation framework** that treats fairness as a dynamically
-regulated signal.
-
-A **Proportional–Integral–Derivative (PID) controller** monitors demographic parity violations and
-adaptively reweights training samples during incremental learning.
-
----
+This project studies fairness drift in streaming / incremental learning and mitigates it using a **PID controller** that regulates demographic parity violations by adaptively reweighting incoming samples.
 
 ## Repository Structure
 
 ```text
 .
 ├── src/
-│   ├── data.py        # Synthetic data stream generation with fairness drift
-│   ├── model.py       # Incremental classifier (SGDClassifier)
-│   ├── fairness.py    # Fairness metrics (Demographic Parity)
-│   ├── pid.py         # PID controller implementation
-│   ├── experiment.py # Experimental logic and baselines
-│   └── plots.py       # Visualization utilities
-├── run.py             # Main entry point
-├── batch_runner.py    # Monte Carlo robustness simulations
-├── requirements.txt   # Python dependencies
-└── README.md          # Project documentation
+│   ├── data.py               # Data loading & stream preparation
+│   ├── model.py              # Incremental classifier utilities
+│   ├── fairness.py           # Fairness metrics (Demographic Parity)
+│   ├── pid.py                # PID controller
+│   ├── experiment.py         # Experiment logic and baselines
+│   ├── experiment_runner.py  # Orchestrates runs from config
+│   └── plots.py              # Visualization utilities
+├── configs/                  # YAML configs (synthetic, folktables)
+├── data/                     # Local datasets (not tracked in git)
+├── results/                  # MLflow outputs and artifacts
+├── requirements.txt
+└── README.md
 ```
 
-## Running the Experiments
-To reproduce the experiments reported in the paper, run:
-1.python3 run.py
-2.python3 batch_runner.py
+## Setup
+1. Create and activate a Python environment.
+2. Install dependencies from [requirements.txt](requirements.txt).
+
+## Running Experiments
+Run experiments via config files:
+- Synthetic stream:
+	python src/experiment_runner.py configs/synthetic.yaml
+- Folktables stream:
+	python src/experiment_runner.py configs/folktables.yaml
+
+The runner writes outputs under results/ and also stores the resolved config snapshot.
+
+## Notes
+- Large datasets under data/ are intentionally excluded from git.
+- Results are logged under results/ (including MLflow runs).
 
 ## Reproducibility
-All experiments are deterministic given fixed random seeds.
-Hyperparameters and experimental settings are documented in the source code.
+Experiments are deterministic given fixed seeds. All hyperparameters are defined in the config YAMLs.
 
 ## License
-This code is released for academic and research purposes.
+Released for academic and research purposes.
