@@ -63,23 +63,38 @@ class ExperimentRunner:
         self.log("SYNTHETIC DATA - SINGLE RUN")
         self.log("="*70)
         
-        np.random.seed(42)
-        log_fairness, log_accuracy, log_control = run_experiment(
-            T=self.data_config['num_batches']
-        )
+        with mlflow.start_run(run_name=f"synthetic_single_{datetime.now().strftime('%H%M%S')}"):
+            np.random.seed(42)
+            log_fairness, log_accuracy, log_control = run_experiment(
+                T=self.data_config['num_batches']
+            )
+            
+            # Log metrics to MLflow
+            for method in log_fairness.keys():
+                mean_dp = np.mean(np.abs(log_fairness[method]))
+                std_dp = np.std(log_fairness[method])
+                mean_acc = np.mean(log_accuracy[method])
+                std_acc = np.std(log_accuracy[method])
+                
+                mlflow.log_metrics({
+                    f'{method}_mean_dp': mean_dp,
+                    f'{method}_std_dp': std_dp,
+                    f'{method}_mean_acc': mean_acc,
+                    f'{method}_std_acc': std_acc
+                })
         
         output_prefix = os.path.join(self.output_dir, "single_run/fig")
         os.makedirs(os.path.dirname(output_prefix), exist_ok=True)
         
         plot_results(log_fairness, log_accuracy, log_control, 
                     filename_prefix=output_prefix)
-        self.log("✓ Single run complete")
+        self.log("✓ Single run complete (metrics logged to MLflow)")
         return log_fairness, log_accuracy, log_control
     
     def run_synthetic_robustness(self):
         """Run robustness analysis on synthetic data."""
         self.log("\n" + "="*70)
-        with mlflow.start_run(run_name='synthetic_robustness'):
+        with mlflow.start_run(run_name=f"synthetic_robustness_{datetime.now().strftime('%H%M%S')}"):
             num_seeds = self.config['robustness']['num_seeds']
             T = self.data_config['num_batches']
             methods = self.exp_config.get('methods', ['base', 'static', 'sliding', 'pid'])
@@ -152,85 +167,99 @@ class ExperimentRunner:
         self.log("FOLKTABLES - SINGLE RUN")
         self.log("="*70)
         
-        stream = FolktablesDataStream(
-            task=self.data_config['task'],
-            states=self.data_config['states'][:1],  # First state only
-            years=self.data_config['years'],
-            sensitive_attribute=self.data_config['sensitive_attribute'],
-            batch_size=self.data_config['batch_size'],
-            mode=self.data_config['mode']
-        )
+        with mlflow.start_run(run_name=f"folktables_single_{datetime.now().strftime('%H%M%S')}"):
+            stream = FolktablesDataStream(
+                task=self.data_config['task'],
+                states=self.data_config['states'][:1],  # First state only
+                years=self.data_config['years'],
+                sensitive_attribute=self.data_config['sensitive_attribute'],
+                batch_size=self.data_config['batch_size'],
+                mode=self.data_config['mode']
+            )
+            
+            model_base = OnlineModel()
+            model_pid = OnlineModel()
+            pid = PIDController(
+                kp=self.config['pid_controller']['kp'],
+                ki=self.config['pid_controller']['ki'],
+                kd=self.config['pid_controller']['kd'],
+                target=self.config['pid_controller']['target']
+            )
+            
+            log_fairness = {'baseline': [], 'pid': []}
+            log_accuracy = {'baseline': [], 'pid': []}
+            log_control = []
+            year_transitions = []
+            
+            T = self.data_config['num_time_steps']
+            current_year = None
+            
+            for t in range(T):
+                # Track year changes
+                if hasattr(stream, 'current_year_idx'):
+                    new_year = stream.year_datasets[stream.current_year_idx]['year']
+                    if t > 0 and new_year != current_year:
+                        year_transitions.append(t)
+                        self.log(f"  ⚠️  YEAR TRANSITION at step {t}: {current_year} → {new_year}")
+                    current_year = new_year
+                
+                X, y, A = stream.get_batch()
+                
+                # Baseline
+                if t > 0:
+                    y_pred_base = model_base.predict(X)
+                    dp_base = demographic_parity(y_pred_base, A)
+                    acc_base = np.mean(y_pred_base == y)
+                else:
+                    dp_base, acc_base = 0.0, 0.5
+                
+                log_fairness['baseline'].append(dp_base)
+                log_accuracy['baseline'].append(acc_base)
+                model_base.fit(X, y)
+                
+                # PID
+                if t > 0:
+                    y_pred_pid = model_pid.predict(X)
+                    dp_pid = demographic_parity(y_pred_pid, A)
+                    acc_pid = np.mean(y_pred_pid == y)
+                else:
+                    dp_pid, acc_pid = 0.0, 0.5
+                
+                log_fairness['pid'].append(dp_pid)
+                log_accuracy['pid'].append(acc_pid)
+                
+                u = pid.step(dp_pid)
+                u = float(np.clip(u, -3.0, 3.0))
+                log_control.append(u)
+                
+                scale = float(np.exp(-u))
+                w_minority = scale if scale < 1 else 1.0
+                w_majority = 1.0 / scale if scale < 1 else 1.0
+                weights = np.where(A == 0, w_majority, w_minority)
+                
+                model_pid.fit(X, y, sample_weight=weights)
+            
+            # Log metrics to MLflow
+            mlflow.log_metrics({
+                'baseline_mean_dp': np.mean(np.abs(log_fairness['baseline'])),
+                'baseline_std_dp': np.std(log_fairness['baseline']),
+                'baseline_mean_acc': np.mean(log_accuracy['baseline']),
+                'baseline_std_acc': np.std(log_accuracy['baseline']),
+                'pid_mean_dp': np.mean(np.abs(log_fairness['pid'])),
+                'pid_std_dp': np.std(log_fairness['pid']),
+                'pid_mean_acc': np.mean(log_accuracy['pid']),
+                'pid_std_acc': np.std(log_accuracy['pid']),
+            })
+            
+            output_prefix = os.path.join(self.output_dir, "single_run/folktables_income_temporal")
+            os.makedirs(os.path.dirname(output_prefix), exist_ok=True)
+            
+            plot_results(log_fairness, log_accuracy, log_control,
+                        filename_prefix=output_prefix,
+                        year_transitions=year_transitions)
+            
+            self.log("✓ Single run complete (metrics logged to MLflow)")
         
-        model_base = OnlineModel()
-        model_pid = OnlineModel()
-        pid = PIDController(
-            kp=self.config['pid_controller']['kp'],
-            ki=self.config['pid_controller']['ki'],
-            kd=self.config['pid_controller']['kd'],
-            target=self.config['pid_controller']['target']
-        )
-        
-        log_fairness = {'baseline': [], 'pid': []}
-        log_accuracy = {'baseline': [], 'pid': []}
-        log_control = []
-        year_transitions = []
-        
-        T = self.data_config['num_time_steps']
-        current_year = None
-        
-        for t in range(T):
-            # Track year changes
-            if hasattr(stream, 'current_year_idx'):
-                new_year = stream.year_datasets[stream.current_year_idx]['year']
-                if t > 0 and new_year != current_year:
-                    year_transitions.append(t)
-                    self.log(f"  ⚠️  YEAR TRANSITION at step {t}: {current_year} → {new_year}")
-                current_year = new_year
-            
-            X, y, A = stream.get_batch()
-            
-            # Baseline
-            if t > 0:
-                y_pred_base = model_base.predict(X)
-                dp_base = demographic_parity(y_pred_base, A)
-                acc_base = np.mean(y_pred_base == y)
-            else:
-                dp_base, acc_base = 0.0, 0.5
-            
-            log_fairness['baseline'].append(dp_base)
-            log_accuracy['baseline'].append(acc_base)
-            model_base.fit(X, y)
-            
-            # PID
-            if t > 0:
-                y_pred_pid = model_pid.predict(X)
-                dp_pid = demographic_parity(y_pred_pid, A)
-                acc_pid = np.mean(y_pred_pid == y)
-            else:
-                dp_pid, acc_pid = 0.0, 0.5
-            
-            log_fairness['pid'].append(dp_pid)
-            log_accuracy['pid'].append(acc_pid)
-            
-            u = pid.step(dp_pid)
-            u = float(np.clip(u, -3.0, 3.0))
-            log_control.append(u)
-            
-            scale = float(np.exp(-u))
-            w_minority = scale if scale < 1 else 1.0
-            w_majority = 1.0 / scale if scale < 1 else 1.0
-            weights = np.where(A == 0, w_majority, w_minority)
-            
-            model_pid.fit(X, y, sample_weight=weights)
-        
-        output_prefix = os.path.join(self.output_dir, "single_run/folktables_income_temporal")
-        os.makedirs(os.path.dirname(output_prefix), exist_ok=True)
-        
-        plot_results(log_fairness, log_accuracy, log_control,
-                    filename_prefix=output_prefix,
-                    year_transitions=year_transitions)
-        
-        self.log("✓ Single run complete")
         return log_fairness, log_accuracy, log_control
     
     def run(self):

@@ -87,23 +87,36 @@ class FolktablesDataStream:
             
             all_X, all_y, all_A = [], [], []
             for state in self.states:
-                acs_data = data_source.get_data(states=[state], download=True)
-                X, y, _ = self.task.df_to_pandas(acs_data)
-                
-                # Extract sensitive attribute
-                A = self._extract_sensitive_attribute(X)
-                
-                # Drop sensitive attribute from features
-                X = X.drop(columns=[self.sensitive_attribute], errors='ignore')
-                
-                all_X.append(X.values)
-                all_y.append(y.values)
-                all_A.append(A.values)
+                try:
+                    # Correct Folktables API: get_data() takes NO task parameter!
+                    # Just states, download, etc. Task is applied AFTER via df_to_pandas()
+                    acs_data = data_source.get_data(states=[state], download=True)
+                    X, y, _ = self.task.df_to_pandas(acs_data)
+                    
+                    # Extract sensitive attribute
+                    A = self._extract_sensitive_attribute(X)
+                    
+                    # Drop sensitive attribute from features
+                    X = X.drop(columns=[self.sensitive_attribute], errors='ignore')
+                    
+                    all_X.append(X.values)
+                    all_y.append(y.values)
+                    all_A.append(A.values)
+                    print(f"  ✓ Loaded {state} {year}: {X.shape[0]} samples")
+                except Exception as e:
+                    print(f"  ✗ Error loading {state} {year}: {type(e).__name__}: {e}")
+                    continue
+            
+            if not all_X:  # Skip if no data loaded
+                print(f"  ✗ No data loaded for year {year}, skipping")
+                continue
             
             # Concatenate data for this year
             X_year = np.vstack(all_X)
             y_year = np.concatenate(all_y).ravel()
             A_year = np.concatenate(all_A)
+            
+            print(f"  ✓ Year {year} total: {X_year.shape[0]} samples")
             
             # Fit scaler on first year, transform all
             if self.scaler is None:
@@ -115,6 +128,8 @@ class FolktablesDataStream:
             self.year_datasets.append({
                 'X': X_year, 'y': y_year, 'A': A_year, 'year': year
             })
+        
+        print(f"  ✓ Loaded {len(self.year_datasets)} years total")
         
         # Start with first year
         self.current_year_idx = 0
