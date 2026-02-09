@@ -12,7 +12,7 @@ import numpy as np
 from typing import Dict, List, Tuple
 from src.data import generate_batch
 from src.model import OnlineModel
-from src.fairness import demographic_parity
+from src.fairness import demographic_parity, precision_score, recall_score, f1_score
 from src.pid import PIDController
 from src.strategies.base import Strategy, BaselineStrategy
 from src.strategies.gbr import StaticGBRStrategy, SlidingGBRStrategy
@@ -53,8 +53,15 @@ class StreamingExperiment:
         # 2. LOG
         fairness = demographic_parity(y_pred, A)
         accuracy = (y_pred == y).mean()
+        precision = precision_score(y, y_pred)
+        recall = recall_score(y, y_pred)
+        f1 = f1_score(y, y_pred)
+        
         logs['fairness'][strategy_name].append(fairness)
         logs['accuracy'][strategy_name].append(accuracy)
+        logs['precision'][strategy_name].append(precision)
+        logs['recall'][strategy_name].append(recall)
+        logs['f1'][strategy_name].append(f1)
         
         # 3. CONTROL (if applicable)
         if isinstance(strategy, PIDControlStrategy):
@@ -87,6 +94,9 @@ class StreamingExperiment:
         logs = {
             'fairness': {name: [] for name in self.strategies.keys()},
             'accuracy': {name: [] for name in self.strategies.keys()},
+            'precision': {name: [] for name in self.strategies.keys()},
+            'recall': {name: [] for name in self.strategies.keys()},
+            'f1': {name: [] for name in self.strategies.keys()},
             'control': []
         }
         
