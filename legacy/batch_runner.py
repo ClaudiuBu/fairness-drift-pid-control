@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from src.experiment import run_experiment
 import pandas as pd
+import os
 
 # --- Configuration ---
 NUM_SEEDS = 20
@@ -56,9 +57,10 @@ def run_batch_analysis():
     print(df_stats.to_string(index=False))
     
     # --- Visualization ---
-    plot_confidence_intervals(results_fairness, "Demographic Parity Gap (Mean ± 1 Std Dev)", "fig_robustness_fairness.png")
-    plot_confidence_intervals(results_accuracy, "Accuracy (Mean ± 1 Std Dev)", "fig_robustness_accuracy.png")
-    print("\nDone. Check 'fig_robustness_fairness.png' and 'fig_robustness_accuracy.png'.")
+    os.makedirs('results/synthetic/robustness', exist_ok=True)
+    plot_confidence_intervals(results_fairness, "Demographic Parity Gap (Mean ± 1 Std Dev)", "results/synthetic/robustness/robustness_fairness.png")
+    plot_confidence_intervals(results_accuracy, "Accuracy (Mean ± 1 Std Dev)", "results/synthetic/robustness/robustness_accuracy.png")
+    print("\nDone. Check 'results/synthetic/robustness/' folder.")
 
 def plot_confidence_intervals(data_dict, title, filename):
     plt.figure(figsize=(12, 6))

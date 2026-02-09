@@ -1,0 +1,25 @@
+data:
+  drift_start: 15
+  num_batches: 60
+  num_features: 10
+  num_samples_per_batch: 100
+experiment:
+  data_type: synthetic
+  methods:
+  - base
+  - static
+  - sliding
+  - pid
+  name: synthetic_robustness
+  type: robustness
+output:
+  dir: results/synthetic
+  dpi: 150
+  format: png
+pid_controller:
+  kd: 0.5
+  ki: 1.0
+  kp: 10.0
+  target: 0.0
+robustness:
+  num_seeds: 20

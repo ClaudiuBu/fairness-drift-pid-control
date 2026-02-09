@@ -1,52 +1,110 @@
 import matplotlib.pyplot as plt
+import os
 
-def plot_results(log_fairness, log_accuracy, log_control):
+def plot_results(log_fairness, log_accuracy, log_control, filename_prefix='fig', year_transitions=None):
+    """
+    Plot experiment results.
+    
+    Args:
+        log_fairness: dict with fairness metrics for each method
+        log_accuracy: dict with accuracy metrics for each method
+        log_control: list of control signals
+        filename_prefix: prefix for saved figure filenames
+        year_transitions: list of time steps where years changed (for temporal mode)
+    """
+    # Create output directory based on filename prefix
+    if 'folktables' in filename_prefix:
+        output_dir = 'results/folktables/single_run'
+    else:
+        output_dir = 'results/synthetic/single_run'
+    os.makedirs(output_dir, exist_ok=True)
+    
     plt.style.use('seaborn-v0_8-whitegrid')
 
     # --- GRAFIC 1: FAIRNESS ---
     plt.figure(figsize=(12, 6))
     
-    # Plotăm toate cele 4 curbe
-    plt.plot(log_fairness["base"], label='Baseline', color='grey', linestyle='--', alpha=0.5)
-    plt.plot(log_fairness["static"], label='Static GBR (t=0)', color='blue', linestyle='-.', alpha=0.6)
-    plt.plot(log_fairness["sliding"], label='Sliding GBR', color='orange', linestyle='-', linewidth=2, alpha=0.8)
-    plt.plot(log_fairness["pid"], label='PID Control', color='green', linewidth=3)
+    # Plot all available methods
+    colors = {'base': 'grey', 'baseline': 'grey', 'static': 'blue', 
+              'sliding': 'orange', 'pid': 'green'}
+    styles = {'base': '--', 'baseline': '--', 'static': '-.', 
+              'sliding': '-', 'pid': '-'}
+    alphas = {'base': 0.5, 'baseline': 0.5, 'static': 0.6, 
+              'sliding': 0.8, 'pid': 1.0}
+    widths = {'base': 1, 'baseline': 1, 'static': 1, 
+              'sliding': 2, 'pid': 3}
     
-    plt.axhline(0, color='black', linestyle=':', label='Target (0.0)')
-    plt.axvline(15, color='red', linestyle=':', label='Drift Start')
+    for method, values in log_fairness.items():
+        label = method.replace('_', ' ').title()
+        plt.plot(values, label=label, 
+                color=colors.get(method, 'black'),
+                linestyle=styles.get(method, '-'),
+                alpha=alphas.get(method, 0.8),
+                linewidth=widths.get(method, 1))
     
-    plt.title("Fairness Drift Mitigation: PID vs Sliding Window vs Static")
+    plt.axhline(0, color='black', linestyle=':', label='Target (0.0)', alpha=0.5)
+    
+    # Add year transitions for temporal mode
+    if year_transitions:
+        for i, trans in enumerate(year_transitions):
+            label_text = 'Year Transition' if i == 0 else None
+            plt.axvline(trans, color='red', linestyle='--', alpha=0.6, 
+                       linewidth=2, label=label_text)
+    # Add drift start line if data looks synthetic (drift at t=15)
+    elif len(log_fairness[list(log_fairness.keys())[0]]) >= 20:
+        plt.axvline(15, color='red', linestyle=':', label='Drift Start', alpha=0.5)
+    
+    plt.title("Fairness Drift Mitigation Comparison")
     plt.xlabel("Time Steps")
     plt.ylabel("Demographic Parity Gap")
     plt.legend()
     plt.tight_layout()
-    plt.savefig('fig1_fairness_comparison.png')
+    plt.savefig(f'{filename_prefix}_fairness.png', dpi=150)
     plt.show()
 
     # --- GRAFIC 2: ACCURACY ---
     plt.figure(figsize=(12, 5))
-    plt.plot(log_accuracy["base"], label='Baseline', color='grey', linestyle='--', alpha=0.3)
-    plt.plot(log_accuracy["static"], label='Static', color='blue', alpha=0.3)
-    plt.plot(log_accuracy["sliding"], label='Sliding Window', color='orange', alpha=0.6)
-    plt.plot(log_accuracy["pid"], label='PID Control', color='green', linewidth=2)
     
-    plt.axvline(15, color='red', linestyle=':', label='Drift Start')
+    for method, values in log_accuracy.items():
+        label = method.replace('_', ' ').title()
+        plt.plot(values, label=label,
+                color=colors.get(method, 'black'),
+                linestyle=styles.get(method, '-'),
+                alpha=alphas.get(method, 0.8),
+                linewidth=widths.get(method, 1))
+    
+    # Add year transitions
+    if year_transitions:
+        for trans in year_transitions:
+            plt.axvline(trans, color='red', linestyle='--', alpha=0.4, linewidth=1.5)
+    elif len(log_accuracy[list(log_accuracy.keys())[0]]) >= 20:
+        plt.axvline(15, color='red', linestyle=':', label='Drift Start', alpha=0.5)
+    
     plt.title("Impact on Accuracy")
     plt.xlabel("Time Steps")
     plt.ylabel("Accuracy")
     plt.ylim(0.4, 1.0)
     plt.legend()
     plt.tight_layout()
-    plt.savefig('fig2_accuracy_comparison.png')
+    plt.savefig(f'{output_dir}/{filename_prefix}_accuracy.png', dpi=150)
     plt.show()
 
     # --- GRAFIC 3: CONTROL SIGNAL ---
     plt.figure(figsize=(10, 4))
-    plt.plot(log_control, color='purple', linewidth=1.5)
-    plt.axvline(15, color='red', linestyle=':')
+    plt.plot(log_control, color='purple', linewidth=1.5, label='PID Control Signal')
+    
+    # Add year transitions
+    if year_transitions:
+        for trans in year_transitions:
+            plt.axvline(trans, color='red', linestyle='--', alpha=0.4, linewidth=1.5)
+    elif len(log_control) >= 20:
+        plt.axvline(15, color='red', linestyle=':', alpha=0.5)
+    
     plt.title("PID Control Signal Activity")
+    plt.xlabel("Time Steps")
     plt.ylabel("Correction Magnitude (u)")
+    plt.legend()
     plt.tight_layout()
-    plt.savefig('fig3_pid_control.png')
+    plt.savefig(f'{output_dir}/{filename_prefix}_control.png', dpi=150)
     plt.show()
 

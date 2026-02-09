@@ -1,0 +1,174 @@
+================================================================================
+PID FAIRNESS DRIFT CONTROL - PROJECT TODO LIST
+================================================================================
+Updated: 9 February 2026
+Progress: 14/20 tasks complete (70%)
+
+================================================================================
+✅ COMPLETED TASKS (14)
+================================================================================
+
+[X] Implement Folktables integration
+    - ACS Census data 2014-2018
+    - Income/Employment prediction tasks
+    - ~350K samples per state/year
+
+[X] Fix PID method name (update→step)
+    - Changed from pid.update() to pid.step()
+    - Now works correctly with PIDController API
+
+[X] Fix weight mapping (exponential)
+    - Changed from linear to exponential: scale = exp(-u)
+    - More stable control behavior
+
+[X] Add year transition visualization
+    - Red dashed vertical lines in temporal plots
+    - Shows when data shifts between years
+
+[X] Restructure project (unified runner)
+    - Created src/experiment_runner.py
+    - Config-driven approach with YAML files
+    - Replaces run.py + batch_runner.py
+
+[X] Move legacy scripts to legacy/
+    - Organized old scripts: run.py, batch_runner.py, etc.
+    - Clean project structure
+
+[X] Create config YAML files
+    - configs/synthetic.yaml (robustness: N=20 seeds)
+    - configs/folktables.yaml (temporal/geographic modes)
+
+[X] Add QUICK_START.md documentation
+    - Usage instructions
+    - Configuration options
+    - Output structure
+
+[X] Install MLflow and scipy
+    - MLflow for experiment tracking
+    - scipy.stats for statistical tests
+
+[X] Implement MLflow experiment tracking
+    - Runs tracked in results/*/mlruns/
+    - All metrics logged (mean/std fairness & accuracy)
+    - Config versioning
+
+[X] Add statistical t-tests (PID vs Baseline)
+    - scipy.stats.ttest_ind()
+    - p-values logged to MLflow
+    - Results: p < 0.001 (significant!)
+
+[X] Fix MLflow active run conflicts
+    - Moved setup from __init__ to run()
+    - Fixed auto-run creation issues
+
+[X] Fix robustness method plot generation
+    - Added plot_results() call
+    - Saves to results/synthetic/robustness/fig_*.png
+
+[X] Test full experiment pipeline
+    - Synthetic experiments working ✓
+    - MLflow tracking functional ✓
+    - Plots generated successfully ✓
+
+================================================================================
+⏳ REMAINING TASKS (6)
+================================================================================
+
+PRIORITY 1: FOLKTABLES TESTING
+-------------------------------
+[ ] Create Folktables robustness config
+    - Geographic diversity test across 10 states
+    - Multiple years temporal drift
+    - N=20 Monte Carlo seeds
+
+[ ] Test Folktables temporal experiment
+    - Run: python3 -m src.experiment_runner configs/folktables.yaml
+    - Verify year transitions work correctly
+    - Check plot generation
+
+PRIORITY 2: SCIENTIFIC RIGOR
+-----------------------------
+[ ] Generate MLflow UI dashboard
+    - Run: mlflow ui --backend-store-uri results/synthetic/mlruns
+    - Compare experiments visually
+    - Export comparison tables
+
+[ ] Add data versioning (DVC)
+    - Setup: dvc init
+    - Track Folktables downloads
+    - Ensure exact reproducibility
+
+PRIORITY 3: PUBLICATION
+-----------------------
+[ ] Create publication-ready plots
+    - High DPI (300+)
+    - LaTeX fonts
+    - Color-blind friendly palettes
+    - Multiple formats (PNG, PDF, SVG)
+
+[ ] Write final paper results section
+    - Statistical significance results
+    - Comparison tables
+    - Effect sizes (Cohen's d)
+    - Benchmark vs SOTA methods
+
+================================================================================
+ADDITIONAL RECOMMENDATIONS FOR TOP-TIER PAPERS
+================================================================================
+
+MISSING FEATURES:
+-----------------
+[ ] Raportare Automată
+    - Generate HTML/PDF summary reports
+    - Auto-create LaTeX tables with metrics
+    - Include plots in automated report
+
+[ ] Model Checkpointing
+    - Save model states at key timestamps
+    - Enable ensemble/stacking experiments
+    - Store best models per metric
+
+[ ] Benchmark Comparisons
+    - Implement SOTA fairness methods
+    - Systematic comparison framework
+    - Effect size calculations (Cohen's d)
+
+[ ] Extended Statistical Tests
+    - Wilcoxon signed-rank test
+    - Bootstrap confidence intervals
+    - Multiple comparison corrections (Bonferroni)
+
+[ ] Ablation Studies
+    - Test different PID parameters (Kp, Ki, Kd)
+    - Sensitivity analysis
+    - Control vs no-control baselines
+
+================================================================================
+QUICK COMMANDS
+================================================================================
+
+# Run synthetic experiment
+python3 -m src.experiment_runner configs/synthetic.yaml
+
+# Run Folktables experiment
+python3 -m src.experiment_runner configs/folktables.yaml
+
+# View MLflow UI
+mlflow ui --backend-store-uri results/synthetic/mlruns
+
+# Check results
+ls -lh results/synthetic/robustness/*.png
+cat results/synthetic/experiment_*.log
+
+================================================================================
+NEXT SESSION PRIORITIES
+================================================================================
+
+1. Test Folktables temporal experiment (15-20 min)
+2. Create MLflow dashboard for comparison (5 min)
+3. Setup DVC for data versioning (10 min)
+4. Generate publication plots (20 min)
+
+Estimated time to complete all remaining: ~2-3 hours
+
+================================================================================

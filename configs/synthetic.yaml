@@ -1,0 +1,29 @@
+experiment:
+  name: "synthetic_robustness"
+  type: "robustness"  # single_run, robustness
+  data_type: "synthetic"
+  methods:
+    - base
+    - static
+    - sliding
+    - pid
+  
+data:
+  num_samples_per_batch: 100
+  num_features: 10
+  num_batches: 60
+  drift_start: 15
+
+pid_controller:
+  kp: 10.0
+  ki: 1.0
+  kd: 0.5
+  target: 0.0
+
+robustness:
+  num_seeds: 20
+  
+output:
+  dir: "results/synthetic"
+  dpi: 150
+  format: "png"
