@@ -1,74 +1,6 @@
 ================================================================================
 PID FAIRNESS DRIFT CONTROL - PROJECT TODO LIST
 ================================================================================
-Updated: 9 February 2026
-Progress: 14/20 tasks complete (70%)
-
-================================================================================
-✅ COMPLETED TASKS (14)
-================================================================================
-
-[X] Implement Folktables integration
-    - ACS Census data 2014-2018
-    - Income/Employment prediction tasks
-    - ~350K samples per state/year
-
-[X] Fix PID method name (update→step)
-    - Changed from pid.update() to pid.step()
-    - Now works correctly with PIDController API
-
-[X] Fix weight mapping (exponential)
-    - Changed from linear to exponential: scale = exp(-u)
-    - More stable control behavior
-
-[X] Add year transition visualization
-    - Red dashed vertical lines in temporal plots
-    - Shows when data shifts between years
-
-[X] Restructure project (unified runner)
-    - Created src/experiment_runner.py
-    - Config-driven approach with YAML files
-    - Replaces run.py + batch_runner.py
-
-[X] Move legacy scripts to legacy/
-    - Organized old scripts: run.py, batch_runner.py, etc.
-    - Clean project structure
-
-[X] Create config YAML files
-    - configs/synthetic.yaml (robustness: N=20 seeds)
-    - configs/folktables.yaml (temporal/geographic modes)
-
-[X] Add QUICK_START.md documentation
-    - Usage instructions
-    - Configuration options
-    - Output structure
-
-[X] Install MLflow and scipy
-    - MLflow for experiment tracking
-    - scipy.stats for statistical tests
-
-[X] Implement MLflow experiment tracking
-    - Runs tracked in results/*/mlruns/
-    - All metrics logged (mean/std fairness & accuracy)
-    - Config versioning
-
-[X] Add statistical t-tests (PID vs Baseline)
-    - scipy.stats.ttest_ind()
-    - p-values logged to MLflow
-    - Results: p < 0.001 (significant!)
-
-[X] Fix MLflow active run conflicts
-    - Moved setup from __init__ to run()
-    - Fixed auto-run creation issues
-
-[X] Fix robustness method plot generation
-    - Added plot_results() call
-    - Saves to results/synthetic/robustness/fig_*.png
-
-[X] Test full experiment pipeline
-    - Synthetic experiments working ✓
-    - MLflow tracking functional ✓
-    - Plots generated successfully ✓
 
 ================================================================================
 ⏳ REMAINING TASKS (6)
@@ -172,3 +104,52 @@ NEXT SESSION PRIORITIES
 Estimated time to complete all remaining: ~2-3 hours
 
 ================================================================================
+
+Personal TO DO:
+1. Check difference between modular runner and experiment_modular 
+2. MLFLOW not registering correctly experiments
+3. Every strategy should be chwecked with literature implementation
+4. Data training for folktables should be checked if the right methodology is used
+5. All code should be vetted and tested(each line understood) 
+6. Check your results with other papers that share similar arhitecture,reproduce 
+another paper and check if the methodology used here yelds the same results
+6.1 if you can reproduce a paper result 1:1 with your code, than your code is correct for current data
+7. Check methodology for streaming fairness data 
+8. Why this model was used? Why not logisticregression?
+9. Do not add features without understanding current codebase 
+10. Paper should be written based on the correct version of the code
+11. Plots should be modular, right now i plot different things, use the same code
+everything its a miss, it should be metric = plot 
+12. Metodology should be 100% checked for each component
+13. What i plot? Accuracy, Fairness(DP) and control, check if this is the right way
+(inspire yourself from the medical paper, which plots they use)
+14. Take from yaml the arguments when using cli, if i have data there, it should be passed 
+in experiment function.
+15. Read as many papers as possible, and build a LaTeX version, first 2 chapters can be 
+done without final code.
+16. Now i test with one dataset, what if i add another dataset. If so i need to make 
+sure that everything up until training is the same, modularized, and methodology is correct.
+17. DRY - DONT REPEAT yourself
+18. Config Driven 
+19. Modular, sa pot genera experimente usor. 
+20. Reproductibl - configul va genera aceleasi rezultate 
+21. Scalabil - usor de adaugat metode de atenuare sau dataseturi noi 
+22.Experiment Tracking ❌
+23.Nu avem MLflow/Weights&Biases sau avem doar partial
+24.Nu poți compara experimente UI
+25.Greu să raportezi metrici
+26.Statistical Significance, p-value< 0.001 (significant!)
+27.Doar mean ± std
+28.Fără p-values, t-tests
+29.Fără effect sizes (Cohen's d)
+30.Data Versioning ❌
+31.Fără DVC
+32.Nu poți reproduce exact dacă datele se schimbă
+33.Raportare Automată ❌
+34.Fără HTML/PDF final summary
+35.Fără tabele rezumat cu metrici
+36.Model Checkpointing ❌
+37.Nu salvezi modele intermediare
+38.Greu să faci ensemble/stacking
+39.Benchmark Comparisons ❌
+40.Fără comparații sistematice cu SOTA- dar trebuie sa stii SOTA pentru asta(vezi abordari asemanatoare la problema care rezolva PID-ul)

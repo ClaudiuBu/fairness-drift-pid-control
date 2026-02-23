@@ -118,8 +118,12 @@ class ExperimentRunner:
         output_prefix = os.path.join(self.output_dir, "single_run/fig")
         os.makedirs(os.path.dirname(output_prefix), exist_ok=True)
         
-        plot_results(log_fairness, log_accuracy, log_control, 
-                    filename_prefix=output_prefix)
+        logs = {
+            'fairness': log_fairness,
+            'accuracy': log_accuracy,
+            'control': {'pid': log_control}
+        }
+        plot_results(logs, output_path=f"{output_prefix}.png")
         self.log("✓ Single run complete (metrics logged to MLflow)")
         return log_fairness, log_accuracy, log_control
     
@@ -197,8 +201,11 @@ class ExperimentRunner:
             # Generate plots
             output_prefix = os.path.join(self.output_dir, "robustness/fig")
             os.makedirs(os.path.dirname(output_prefix), exist_ok=True)
-            plot_results(results_fairness, results_accuracy, None,
-                        filename_prefix=output_prefix)
+            logs = {
+                'fairness': results_fairness,
+                'accuracy': results_accuracy
+            }
+            plot_results(logs, output_path=f"{output_prefix}.png")
             self.log("✓ Robustness analysis complete (plots saved to " + output_prefix + ")")
         
         return results_fairness, results_accuracy
@@ -232,9 +239,16 @@ class ExperimentRunner:
             log_accuracy = {'baseline': [], 'pid': []}
             log_control = []
             year_transitions = []
+            year_labels = []
+            all_years = None
             
             T = self.data_config['num_time_steps']
             current_year = None
+            if hasattr(stream, 'current_year_idx') and getattr(stream, 'year_datasets', None):
+                current_year = stream.year_datasets[stream.current_year_idx]['year']
+                year_labels.append((0, current_year))
+                # Extract all available years for display
+                all_years = [ds['year'] for ds in stream.year_datasets]
             
             for t in range(T):
                 # Track year changes
@@ -242,6 +256,7 @@ class ExperimentRunner:
                     new_year = stream.year_datasets[stream.current_year_idx]['year']
                     if t > 0 and new_year != current_year:
                         year_transitions.append(t)
+                        year_labels.append((t, new_year))
                         self.log(f"  ⚠️  YEAR TRANSITION at step {t}: {current_year} → {new_year}")
                     current_year = new_year
                 
@@ -296,9 +311,13 @@ class ExperimentRunner:
             output_prefix = os.path.join(self.output_dir, "single_run/folktables_income_temporal")
             os.makedirs(os.path.dirname(output_prefix), exist_ok=True)
             
-            plot_results(log_fairness, log_accuracy, log_control,
-                        filename_prefix=output_prefix,
-                        year_transitions=year_transitions)
+            # Prepare logs dict for new plot_results signature
+            logs = {
+                'fairness': log_fairness,
+                'accuracy': log_accuracy,
+                'control': {'pid': log_control}
+            }
+            plot_results(logs, output_path=f"{output_prefix}.png", all_years=year_labels)
             
             self.log("✓ Single run complete (metrics logged to MLflow)")
         

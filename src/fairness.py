@@ -30,3 +30,27 @@ def f1_score(y_true, y_pred):
     if prec + rec == 0:
         return 0.0
     return 2 * (prec * rec) / (prec + rec)
+
+
+def equalized_odds_gap(y_true, y_pred, A):
+    """Equalized Odds gap: max(|TPR_1 - TPR_0|, |FPR_1 - FPR_0|)."""
+    def _rates(mask):
+        y_t = y_true[mask]
+        y_p = y_pred[mask]
+        tp = ((y_t == 1) & (y_p == 1)).sum()
+        fp = ((y_t == 0) & (y_p == 1)).sum()
+        fn = ((y_t == 1) & (y_p == 0)).sum()
+        tn = ((y_t == 0) & (y_p == 0)).sum()
+
+        tpr_den = tp + fn
+        fpr_den = fp + tn
+        tpr = tp / tpr_den if tpr_den > 0 else 0.0
+        fpr = fp / fpr_den if fpr_den > 0 else 0.0
+        return tpr, fpr
+
+    mask0 = A == 0
+    mask1 = A == 1
+    tpr0, fpr0 = _rates(mask0)
+    tpr1, fpr1 = _rates(mask1)
+
+    return max(abs(tpr1 - tpr0), abs(fpr1 - fpr0))

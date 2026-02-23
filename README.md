@@ -16,6 +16,7 @@ This project studies fairness drift in streaming / incremental learning and miti
 │   ├── pid.py                # PID controller
 │   ├── experiment.py         # Experiment logic and baselines
 │   ├── experiment_runner.py  # Orchestrates runs from config
+│   ├── benchmark_runner.py   # Static benchmark on Folktables
 │   └── plots.py              # Visualization utilities
 ├── configs/                  # YAML configs (synthetic, folktables)
 ├── data/                     # Local datasets (not tracked in git)

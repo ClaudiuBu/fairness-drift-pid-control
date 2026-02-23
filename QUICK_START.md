@@ -50,6 +50,22 @@ python3 -m src.experiment_runner configs/folktables_geographic.yaml
 - Data: 2018 only, geographic robustness
 - Output: `results/folktables/robustness/`
 
+### 6. Folktables - Bias Mitigation Benchmark (Static)
+```bash
+python3 -m src.benchmark_runner configs/folktables_benchmark.yaml
+```
+- Methods: baseline, reweighing, equalized odds, fairness constraint
+- Data: CA, 2018 (static split)
+- Output: `results/folktables/benchmark/`
+
+### 7. Folktables - Bias Mitigation Benchmark (Temporal)
+```bash
+python3 -m src.benchmark_runner configs/folktables_benchmark_temporal.yaml
+```
+- Methods: baseline, reweighing, equalized odds, fairness constraint
+- Data: CA, train 2014-2015, val 2016, test 2017-2018
+- Output: `results/folktables/benchmark_temporal/`
+
 ## Output Structure
 
 ```
